@@ -1,0 +1,26 @@
+{% load static %}
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}dongmoon{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  </head>
+  <body class="min-h-screen bg-stone-50 text-neutral-950">
+    <header class="border-b border-neutral-200 bg-white">
+      <div class="mx-auto flex h-14 max-w-5xl items-center justify-between px-5">
+        <a class="font-semibold tracking-tight" href="{% url 'core:home' %}">dongmoon</a>
+        <nav class="text-sm text-neutral-600">
+          <a class="hover:text-neutral-950" href="/admin/">Admin</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-5xl px-5 py-10">
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>
