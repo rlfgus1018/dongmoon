@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }} - {{ school.name }}{% endblock %}
+
+{% block content %}
+  <section>
+    <a class="text-sm font-medium text-teal-700 hover:text-teal-900" href="{% url 'core:school_detail' school.code %}?tab=community&section=board">
+      게시판으로 돌아가기
+    </a>
+
+    <article class="mt-5 border-b border-neutral-200 pb-8">
+      <p class="text-sm text-neutral-600">{{ school.name }}</p>
+      <h1 class="mt-2 text-3xl font-semibold tracking-tight text-neutral-950">{{ post.title }}</h1>
+      <div class="mt-4 flex flex-wrap gap-3 text-sm text-neutral-500">
+        <a class="font-medium text-neutral-600 hover:text-teal-800" href="{% url 'accounts:user_profile' post.author.id %}">{{ post.author_display_name }}</a>
+        <time>{{ post.created_at|date:"Y.m.d H:i" }}</time>
+        <span>댓글 {{ post.comments.count }}</span>
+      </div>
+      {% if post.image %}
+        <img class="mt-8 max-h-[520px] w-full rounded-md object-contain bg-white" src="{{ post.image.url }}" alt="{{ post.title }}">
+      {% endif %}
+      <p class="mt-8 whitespace-pre-line leading-8 text-neutral-800">{{ post.body }}</p>
+
+      <div class="mt-8 flex flex-wrap items-start gap-3">
+        <form method="post" action="{% url 'core:recommend_post' school.code post.id %}">
+          {% csrf_token %}
+          <button class="rounded-md border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:text-neutral-400" {% if not request.user.is_authenticated or has_recommended %}disabled{% endif %}>
+            추천 {{ post.recommendations.count }}
+          </button>
+        </form>
+        {% if has_recommended %}
+          <span class="py-2 text-sm text-neutral-500">이미 추천했습니다.</span>
+        {% elif not request.user.is_authenticated %}
+          <a class="py-2 text-sm font-medium text-teal-700 hover:text-teal-900" href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">로그인 후 추천</a>
+        {% endif %}
+      </div>
+
+      {% if request.user.is_authenticated and request.user != post.author %}
+        <details class="mt-6 max-w-md">
+          <summary class="cursor-pointer text-sm font-medium text-red-700">글 신고</summary>
+          <form class="mt-3 space-y-3" method="post" action="{% url 'core:report_post' school.code post.id %}">
+            {% csrf_token %}
+            {{ post_report_form.reason }}
+            {{ post_report_form.detail }}
+            <button class="rounded-md border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50">신고하기</button>
+          </form>
+        </details>
+      {% endif %}
+
+      {% if can_moderate_school %}
+        <div class="mt-6 flex flex-wrap gap-2">
+          {% if post.is_hidden %}
+            <form method="post" action="{% url 'core:moderate_post' school.code post.id 'restore' %}">
+              {% csrf_token %}
+              <button class="rounded-md border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-neutral-100">글 복구</button>
+            </form>
+          {% else %}
+            <form method="post" action="{% url 'core:moderate_post' school.code post.id 'hide' %}">
+              {% csrf_token %}
+              <button class="rounded-md border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50">관리자 숨김</button>
+            </form>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      {% if request.user == post.author %}
+        <form class="mt-6" method="post" action="{% url 'core:delete_post' school.code post.id %}">
+          {% csrf_token %}
+          <button class="rounded-md border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50">글 삭제</button>
+        </form>
+      {% endif %}
+    </article>
+  </section>
+
+  <section class="mt-8 grid gap-8 md:grid-cols-[0.9fr_1.1fr]">
+    <div>
+      <h2 class="font-semibold text-neutral-950">댓글 쓰기</h2>
+      {% if request.user.is_authenticated %}
+        <form class="mt-4 space-y-3" method="post" action="{% url 'core:create_comment' school.code post.id %}">
+          {% csrf_token %}
+          {{ comment_form.body }}
+          <button class="rounded-md bg-neutral-950 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800">댓글 달기</button>
+        </form>
+      {% else %}
+        <p class="mt-4 text-sm leading-6 text-neutral-600">로그인하면 댓글을 작성할 수 있습니다.</p>
+      {% endif %}
+    </div>
+
+    <div class="divide-y divide-neutral-200">
+      {% for comment in comments %}
+        <article class="py-4">
+          <div class="flex items-center justify-between gap-4">
+            <a class="text-sm font-medium text-neutral-950 hover:text-teal-800" href="{% url 'accounts:user_profile' comment.author.id %}">{{ comment.author_display_name }}</a>
+            <time class="text-xs text-neutral-500">{{ comment.created_at|date:"Y.m.d H:i" }}</time>
+          </div>
+          <p class="mt-2 whitespace-pre-line text-sm leading-6 text-neutral-700">{{ comment.body }}</p>
+          {% if request.user == comment.author %}
+            <form class="mt-3" method="post" action="{% url 'core:delete_comment' school.code post.id comment.id %}">
+              {% csrf_token %}
+              <button class="rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50">댓글 삭제</button>
+            </form>
+          {% endif %}
+          {% if request.user.is_authenticated and request.user != comment.author %}
+            <details class="mt-3 max-w-sm">
+              <summary class="cursor-pointer text-xs font-medium text-red-700">댓글 신고</summary>
+              <form class="mt-2 space-y-2" method="post" action="{% url 'core:report_comment' school.code post.id comment.id %}">
+                {% csrf_token %}
+                {{ comment_report_form.reason }}
+                {{ comment_report_form.detail }}
+                <button class="rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50">신고하기</button>
+              </form>
+            </details>
+          {% endif %}
+          {% if can_moderate_school %}
+            <form class="mt-3" method="post" action="{% url 'core:moderate_comment' school.code post.id comment.id 'hide' %}">
+              {% csrf_token %}
+              <button class="rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50">관리자 숨김</button>
+            </form>
+          {% endif %}
+        </article>
+      {% empty %}
+        <p class="py-8 text-sm text-neutral-600">아직 댓글이 없습니다.</p>
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}

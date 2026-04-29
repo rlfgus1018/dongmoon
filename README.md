@@ -19,6 +19,7 @@ Django 경험을 그대로 살리면서, 프론트엔드는 별도 SPA 없이 �
 uv sync
 Copy-Item .env.example .env
 uv run python manage.py migrate
+uv run python manage.py import_schools "path\to\학교기본정보(고)_전체.csv"
 uv run python manage.py runserver
 ```
 
@@ -29,8 +30,15 @@ Open http://127.0.0.1:8000
 ```powershell
 uv run python manage.py test
 uv run python manage.py createsuperuser
+uv run python manage.py import_schools "path\to\학교기본정보(고)_전체.csv"
 uv run python manage.py collectstatic
 ```
+
+## Accounts
+
+- `/accounts/signup/`: 회원가입
+- `/accounts/login/`: 로그인
+- `/accounts/logout/`: 로그아웃
 
 ## Project Layout
 

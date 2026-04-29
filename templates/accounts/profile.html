@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}{{ profile.display_name }} - dongmoon{% endblock %}
+
+{% block content %}
+  <section class="border-b border-neutral-200 pb-8">
+    <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+      <div class="flex items-center gap-4">
+        {% if profile.avatar %}
+          <img class="h-16 w-16 rounded-md object-cover" src="{{ profile.avatar.url }}" alt="{{ profile.display_name }}">
+        {% else %}
+          <div class="flex h-16 w-16 items-center justify-center rounded-md bg-neutral-200 text-xl font-semibold text-neutral-700">
+            {{ profile.display_name|first|upper }}
+          </div>
+        {% endif %}
+        <div>
+          <p class="text-sm text-neutral-500">{% if is_mypage %}마이페이지{% else %}사용자 프로필{% endif %}</p>
+          <h1 class="mt-1 text-3xl font-semibold tracking-tight text-neutral-950">{{ profile.display_name }}</h1>
+          {% if profile.verified_school %}
+            <a class="mt-2 inline-block text-sm font-medium text-teal-700 hover:text-teal-900" href="{% url 'core:school_detail' profile.verified_school.code %}">
+              {{ profile.verified_school.name }} 인증됨
+            </a>
+          {% else %}
+            <p class="mt-2 text-sm text-neutral-500">학교 인증 전</p>
+          {% endif %}
+        </div>
+      </div>
+      {% if is_mypage %}
+        <div class="text-sm text-neutral-600">
+          <p>{{ profile_user.username }}</p>
+          {% if profile_user.email %}<p>{{ profile_user.email }}</p>{% endif %}
+        </div>
+      {% endif %}
+    </div>
+    {% if profile.bio %}
+      <p class="mt-6 max-w-2xl whitespace-pre-line leading-7 text-neutral-700">{{ profile.bio }}</p>
+    {% endif %}
+  </section>
+
+  {% if is_mypage %}
+    <section class="mt-8 border-b border-neutral-200 pb-8">
+      <h2 class="text-lg font-semibold text-neutral-950">내 정보</h2>
+      <form class="mt-4 grid gap-4 md:grid-cols-[1fr_1fr]" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div>
+          <label class="block text-sm font-medium text-neutral-700" for="{{ form.nickname.id_for_label }}">닉네임</label>
+          <div class="mt-1">{{ form.nickname }}</div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-neutral-700" for="{{ form.avatar.id_for_label }}">프로필 이미지</label>
+          <div class="mt-2">{{ form.avatar }}</div>
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-neutral-700" for="{{ form.bio.id_for_label }}">소개</label>
+          <div class="mt-1">{{ form.bio }}</div>
+        </div>
+        <div class="md:col-span-2">
+          <button class="rounded-md bg-neutral-950 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800">저장</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="mt-8 border-b border-neutral-200 pb-8">
+      <h2 class="text-lg font-semibold text-neutral-950">학교 인증</h2>
+      <p class="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
+        정부24에서 발급한 재학증명서 또는 졸업증명서를 업로드하면 관리자가 학교명과 재학/졸업 여부를 확인합니다.
+        주민등록번호 뒷자리, 주소 등 인증에 필요 없는 정보는 반드시 가려주세요.
+      </p>
+
+      <form class="mt-5 grid gap-4 md:grid-cols-2" method="post" enctype="multipart/form-data" action="{% url 'accounts:request_school_verification' %}">
+        {% csrf_token %}
+        <div>
+          <label class="block text-sm font-medium text-neutral-700" for="{{ verification_form.school.id_for_label }}">학교</label>
+          {{ verification_form.school }}
+          <input
+            class="mt-1"
+            id="school-verification-search"
+            type="search"
+            placeholder="학교명, 지역, 주소로 검색"
+            autocomplete="off"
+            data-search-url="{% url 'accounts:school_search_api' %}"
+            data-target-input="{{ verification_form.school.id_for_label }}"
+          >
+          <div class="mt-2 hidden overflow-hidden rounded-md border border-neutral-200 bg-white" id="school-verification-results"></div>
+          <p class="mt-1.5 text-[11px] leading-4 text-neutral-500" id="school-verification-selected">학교를 검색해서 선택하세요.</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-neutral-700" for="{{ verification_form.verification_type.id_for_label }}">인증 유형</label>
+          <div class="mt-1">{{ verification_form.verification_type }}</div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-neutral-700" for="{{ verification_form.document.id_for_label }}">증명서 파일</label>
+          <div class="mt-2">{{ verification_form.document }}</div>
+          <p class="mt-1.5 text-[11px] leading-4 text-neutral-500">PDF, JPG, PNG · 5MB 이하</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-neutral-700" for="{{ verification_form.note.id_for_label }}">관리자에게 남길 말</label>
+          <div class="mt-1">{{ verification_form.note }}</div>
+        </div>
+        <label class="flex items-start gap-2 text-sm leading-6 text-neutral-700 md:col-span-2">
+          {{ verification_form.privacy_confirmed }}
+          <span>{{ verification_form.privacy_confirmed.label }}</span>
+        </label>
+        <div class="md:col-span-2">
+          <button class="rounded-md bg-neutral-950 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800">인증 신청</button>
+        </div>
+      </form>
+
+      <div class="mt-6 divide-y divide-neutral-200">
+        {% for verification in verifications %}
+          <article class="py-4">
+            <div class="flex flex-wrap items-center gap-3">
+              <p class="font-medium text-neutral-950">{{ verification.school.name }}</p>
+              <span class="rounded-md bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-700">{{ verification.get_verification_type_display }}</span>
+              <span class="rounded-md bg-neutral-950 px-2 py-1 text-xs font-medium text-white">{{ verification.get_status_display }}</span>
+            </div>
+            <p class="mt-2 text-sm text-neutral-500">신청일 {{ verification.created_at|date:"Y.m.d H:i" }}</p>
+            {% if verification.reject_reason %}
+              <p class="mt-2 text-sm text-red-700">반려 사유: {{ verification.reject_reason }}</p>
+            {% endif %}
+          </article>
+        {% empty %}
+          <p class="py-4 text-sm text-neutral-600">학교 인증 신청 내역이 없습니다.</p>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  <section class="mt-8 grid gap-8 lg:grid-cols-2">
+    <div>
+      <h2 class="text-lg font-semibold text-neutral-950">작성한 글</h2>
+      <div class="mt-3 divide-y divide-neutral-200">
+        {% for post in posts %}
+          <article class="py-4">
+            <a class="font-medium text-neutral-950 hover:text-teal-800" href="{% url 'core:post_detail' post.school.code post.id %}">{{ post.title }}</a>
+            <p class="mt-1 text-sm text-neutral-600">{{ post.school.name }} · {{ post.created_at|date:"Y.m.d H:i" }}</p>
+          </article>
+        {% empty %}
+          <p class="py-4 text-sm text-neutral-600">작성한 글이 없습니다.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div>
+      <h2 class="text-lg font-semibold text-neutral-950">작성한 댓글</h2>
+      <div class="mt-3 divide-y divide-neutral-200">
+        {% for comment in comments %}
+          <article class="py-4">
+            <a class="font-medium text-neutral-950 hover:text-teal-800" href="{% url 'core:post_detail' comment.post.school.code comment.post.id %}">{{ comment.post.title }}</a>
+            <p class="mt-1 line-clamp-2 text-sm leading-6 text-neutral-600">{{ comment.body }}</p>
+          </article>
+        {% empty %}
+          <p class="py-4 text-sm text-neutral-600">작성한 댓글이 없습니다.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div>
+      <h2 class="text-lg font-semibold text-neutral-950">방명록</h2>
+      <div class="mt-3 divide-y divide-neutral-200">
+        {% for entry in guestbook_entries %}
+          <article class="py-4">
+            <a class="font-medium text-neutral-950 hover:text-teal-800" href="{% url 'core:school_detail' entry.school.code %}?tab=community&section=guestbook">{{ entry.school.name }}</a>
+            <p class="mt-1 line-clamp-2 text-sm leading-6 text-neutral-600">{{ entry.body }}</p>
+          </article>
+        {% empty %}
+          <p class="py-4 text-sm text-neutral-600">남긴 방명록이 없습니다.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div>
+      <h2 class="text-lg font-semibold text-neutral-950">추천한 글</h2>
+      <div class="mt-3 divide-y divide-neutral-200">
+        {% for recommendation in recommendations %}
+          <article class="py-4">
+            <a class="font-medium text-neutral-950 hover:text-teal-800" href="{% url 'core:post_detail' recommendation.post.school.code recommendation.post.id %}">{{ recommendation.post.title }}</a>
+            <p class="mt-1 text-sm text-neutral-600">{{ recommendation.post.school.name }}</p>
+          </article>
+        {% empty %}
+          <p class="py-4 text-sm text-neutral-600">추천한 글이 없습니다.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  {% if is_mypage %}
+    <script>
+      (() => {
+        const searchInput = document.getElementById("school-verification-search");
+        const resultBox = document.getElementById("school-verification-results");
+        const selectedText = document.getElementById("school-verification-selected");
+        if (!searchInput || !resultBox || !selectedText) return;
+
+        const hiddenInput = document.getElementById(searchInput.dataset.targetInput);
+        let controller;
+
+        function clearResults() {
+          resultBox.innerHTML = "";
+          resultBox.classList.add("hidden");
+        }
+
+        searchInput.addEventListener("input", async () => {
+          const query = searchInput.value.trim();
+          hiddenInput.value = "";
+          selectedText.textContent = "학교를 검색해서 선택하세요.";
+          if (query.length < 2) {
+            clearResults();
+            return;
+          }
+
+          if (controller) controller.abort();
+          controller = new AbortController();
+
+          const response = await fetch(`${searchInput.dataset.searchUrl}?q=${encodeURIComponent(query)}`, {
+            headers: {"X-Requested-With": "XMLHttpRequest"},
+            signal: controller.signal,
+          }).catch(() => null);
+          if (!response) return;
+
+          const data = await response.json();
+          resultBox.innerHTML = "";
+          if (!data.results.length) {
+            resultBox.innerHTML = '<div class="px-3 py-2 text-sm text-neutral-500">검색 결과가 없습니다.</div>';
+            resultBox.classList.remove("hidden");
+            return;
+          }
+
+          data.results.forEach((school) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "block w-full px-3 py-2 text-left hover:bg-neutral-50";
+            button.innerHTML = `<span class="block text-sm font-medium text-neutral-950">${school.name}</span><span class="block text-xs text-neutral-500">${school.region} · ${school.address}</span>`;
+            button.addEventListener("click", () => {
+              hiddenInput.value = school.id;
+              searchInput.value = school.name;
+              selectedText.textContent = `${school.name} 선택됨`;
+              clearResults();
+            });
+            resultBox.appendChild(button);
+          });
+          resultBox.classList.remove("hidden");
+        });
+      })();
+    </script>
+  {% endif %}
+{% endblock %}

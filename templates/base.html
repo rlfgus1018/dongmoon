@@ -13,7 +13,18 @@
     <header class="border-b border-neutral-200 bg-white">
       <div class="mx-auto flex h-14 max-w-5xl items-center justify-between px-5">
         <a class="font-semibold tracking-tight" href="{% url 'core:home' %}">dongmoon</a>
-        <nav class="text-sm text-neutral-600">
+        <nav class="flex items-center gap-4 text-sm text-neutral-600">
+          <a class="hover:text-neutral-950" href="{% url 'core:school_search' %}">학교 찾기</a>
+          {% if request.user.is_authenticated %}
+            <a class="hidden text-neutral-500 hover:text-neutral-950 sm:inline" href="{% url 'accounts:mypage' %}">{{ request.user.username }}</a>
+            <form method="post" action="{% url 'accounts:logout' %}">
+              {% csrf_token %}
+              <button class="hover:text-neutral-950" type="submit">로그아웃</button>
+            </form>
+          {% else %}
+            <a class="hover:text-neutral-950" href="{% url 'accounts:login' %}">로그인</a>
+            <a class="rounded-md bg-neutral-950 px-3 py-2 font-medium text-white hover:bg-neutral-800" href="{% url 'accounts:signup' %}">회원가입</a>
+          {% endif %}
           <a class="hover:text-neutral-950" href="/admin/">Admin</a>
         </nav>
       </div>

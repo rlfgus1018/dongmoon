@@ -5,6 +5,7 @@ __pycache__/
 *.sqlite3
 db.sqlite3
 /staticfiles/
+/media/
 .ruff_cache/
 .pytest_cache/
 .coverage

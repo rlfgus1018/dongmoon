@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block title %}{{ school.name }} - dongmoon{% endblock %}
+
+{% block content %}
+  <section>
+    <a class="text-sm font-medium text-teal-700 hover:text-teal-900" href="{% url 'core:school_search' %}?q={{ school.name|urlencode }}">
+      검색으로 돌아가기
+    </a>
+    <div class="mt-5 border-b border-neutral-200 pb-6">
+      <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p class="text-sm text-neutral-600">{{ school.region }}</p>
+          <h1 class="mt-2 text-3xl font-semibold tracking-tight text-neutral-950 md:text-4xl">{{ school.name }}</h1>
+          <p class="mt-3 text-neutral-700">{{ school.road_address }}</p>
+        </div>
+        {% if request.user.is_authenticated %}
+          <form method="post" action="{% url 'core:toggle_school_favorite' school.code %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button class="rounded-md border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-neutral-100">
+              {% if is_favorite_school %}즐겨찾기 해제{% else %}즐겨찾기{% endif %}
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <nav class="mt-6 flex gap-2 border-b border-neutral-200" aria-label="학교 상세 탭">
+    <a class="px-4 py-3 text-sm font-medium {% if active_tab == 'info' %}border-b-2 border-neutral-950 text-neutral-950{% else %}text-neutral-500 hover:text-neutral-950{% endif %}" href="?tab=info">기본정보</a>
+    <a class="px-4 py-3 text-sm font-medium {% if active_tab == 'community' %}border-b-2 border-neutral-950 text-neutral-950{% else %}text-neutral-500 hover:text-neutral-950{% endif %}" href="?tab=community">커뮤니티</a>
+    <a class="px-4 py-3 text-sm font-medium {% if active_tab == 'alumni' %}border-b-2 border-neutral-950 text-neutral-950{% else %}text-neutral-500 hover:text-neutral-950{% endif %}" href="?tab=alumni">동문</a>
+  </nav>
+
+  {% if active_tab == "info" %}
+    <section class="mt-8 grid gap-4 md:grid-cols-2">
+      <dl class="space-y-4">
+        <div>
+          <dt class="text-sm font-medium text-neutral-500">학교 유형</dt>
+          <dd class="mt-1 text-neutral-950">{{ school.establishment }} · {{ school.school_type }}</dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-neutral-500">남녀공학</dt>
+          <dd class="mt-1 text-neutral-950">{{ school.gender_type|default:"-" }}</dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-neutral-500">전화번호</dt>
+          <dd class="mt-1 text-neutral-950">{{ school.phone|default:"-" }}</dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-neutral-500">홈페이지</dt>
+          <dd class="mt-1">
+            {% if school.homepage_url %}
+              <a class="text-teal-700 hover:text-teal-900" href="{{ school.homepage_url }}" target="_blank" rel="noreferrer">{{ school.homepage_url }}</a>
+            {% else %}
+              <span class="text-neutral-950">-</span>
+            {% endif %}
+          </dd>
+        </div>
+      </dl>
+      <dl class="space-y-4">
+        <div>
+          <dt class="text-sm font-medium text-neutral-500">도로명 주소</dt>
+          <dd class="mt-1 text-neutral-950">{{ school.road_address }} {{ school.road_address_detail }}</dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-neutral-500">지번 주소</dt>
+          <dd class="mt-1 text-neutral-950">{{ school.lot_address|default:"-" }}</dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-neutral-500">개교기념일</dt>
+          <dd class="mt-1 text-neutral-950">{{ school.anniversary_on|date:"Y.m.d"|default:"-" }}</dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-neutral-500">학교 코드</dt>
+          <dd class="mt-1 text-neutral-950">{{ school.code }}</dd>
+        </div>
+      </dl>
+    </section>
+  {% elif active_tab == "community" %}
+    <section class="mt-8">
+      <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h2 class="text-xl font-semibold text-neutral-950">{{ school.name }} 커뮤니티</h2>
+          <p class="mt-2 text-sm text-neutral-600">방명록, 일반 게시판, 학교 인증 게시판으로 이야기를 나눕니다.</p>
+        </div>
+        {% if not request.user.is_authenticated %}
+          <a class="text-sm font-medium text-teal-700 hover:text-teal-900" href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">로그인하고 글쓰기</a>
+        {% elif can_moderate_school %}
+          <a class="text-sm font-medium text-teal-700 hover:text-teal-900" href="{% url 'core:moderation_dashboard' school.code %}">커뮤니티 관리</a>
+        {% endif %}
+      </div>
+
+      <nav class="mt-6 flex gap-2 border-b border-neutral-200" aria-label="커뮤니티 탭">
+        <a class="px-4 py-3 text-sm font-medium {% if community_section == 'guestbook' %}border-b-2 border-teal-700 text-teal-800{% else %}text-neutral-500 hover:text-neutral-950{% endif %}" href="?tab=community&section=guestbook">방명록</a>
+        <a class="px-4 py-3 text-sm font-medium {% if community_section == 'board' %}border-b-2 border-teal-700 text-teal-800{% else %}text-neutral-500 hover:text-neutral-950{% endif %}" href="?tab=community&section=board">게시판</a>
+      </nav>
+
+      {% if community_section == "guestbook" %}
+        <div class="mt-6 grid gap-8 md:grid-cols-[0.9fr_1.1fr]">
+          <div>
+            <h3 class="font-semibold text-neutral-950">방명록 남기기</h3>
+            {% if request.user.is_authenticated %}
+              {% if has_guestbook_entry_today %}
+                <p class="mt-4 rounded-md border border-neutral-200 bg-white px-4 py-3 text-sm leading-6 text-neutral-600">
+                  오늘은 이미 방명록을 남겼습니다. 내일 다시 남길 수 있어요.
+                </p>
+              {% else %}
+                <form class="mt-4 space-y-3" method="post" action="{% url 'core:create_guestbook_entry' school.code %}">
+                  {% csrf_token %}
+                  {{ guestbook_form.body }}
+                  <button class="rounded-md bg-neutral-950 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800">남기기</button>
+                </form>
+              {% endif %}
+            {% else %}
+              <p class="mt-4 text-sm leading-6 text-neutral-600">로그인하면 짧은 방명록을 남길 수 있습니다.</p>
+            {% endif %}
+          </div>
+
+          <div class="divide-y divide-neutral-200">
+            {% for entry in guestbook_entries %}
+              <article class="py-4">
+                <div class="flex items-center justify-between gap-4">
+                  <a class="text-sm font-medium text-neutral-950 hover:text-teal-800" href="{% url 'accounts:user_profile' entry.author.id %}">{{ entry.author_display_name }}</a>
+                  <time class="text-xs text-neutral-500">{{ entry.created_at|date:"Y.m.d H:i" }}</time>
+                </div>
+                <p class="mt-2 whitespace-pre-line text-sm leading-6 text-neutral-700">{{ entry.body }}</p>
+              </article>
+            {% empty %}
+              <p class="py-8 text-sm text-neutral-600">아직 방명록이 없습니다.</p>
+            {% endfor %}
+          </div>
+        </div>
+      {% else %}
+        <nav class="mt-6 flex flex-wrap gap-2" aria-label="게시판 종류">
+          <a class="rounded-md px-3 py-2 text-sm font-medium {% if board_type == 'all' %}bg-neutral-950 text-white{% else %}bg-white text-neutral-700 hover:bg-neutral-100{% endif %}" href="?tab=community&section=board&board=all">전체 게시판</a>
+          <a class="rounded-md px-3 py-2 text-sm font-medium {% if board_type == 'general' %}bg-neutral-950 text-white{% else %}bg-white text-neutral-700 hover:bg-neutral-100{% endif %}" href="?tab=community&section=board&board=general">일반 게시판</a>
+          <a class="rounded-md px-3 py-2 text-sm font-medium {% if board_type == 'verified' %}bg-neutral-950 text-white{% else %}bg-white text-neutral-700 hover:bg-neutral-100{% endif %}" href="?tab=community&section=board&board=verified">인증 게시판</a>
+        </nav>
+
+        <div class="mt-6 grid gap-8 md:grid-cols-[0.9fr_1.1fr]">
+          <div>
+            <h3 class="font-semibold text-neutral-950">
+              {% if board_type == "verified" %}인증 게시판 글쓰기{% else %}글쓰기{% endif %}
+            </h3>
+            {% if request.user.is_authenticated %}
+              {% if board_type == "verified" and not can_access_verified_board %}
+                <p class="mt-4 rounded-md border border-neutral-200 bg-white px-4 py-3 text-sm leading-6 text-neutral-600">
+                  해당 학교 인증을 완료한 사용자만 인증 게시판을 읽고 쓸 수 있습니다.
+                </p>
+                <a class="mt-3 inline-block text-sm font-medium text-teal-700 hover:text-teal-900" href="{% url 'accounts:mypage' %}">마이페이지에서 학교 인증하기</a>
+              {% else %}
+                <form class="mt-4 space-y-3" method="post" enctype="multipart/form-data" action="{% url 'core:create_post' school.code %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="board_type" value="{% if board_type == 'verified' %}verified{% else %}general{% endif %}">
+                  <div>{{ post_form.title }}</div>
+                  <div>{{ post_form.body }}</div>
+                  <div>
+                    <label class="block text-sm font-medium text-neutral-700" for="{{ post_form.image.id_for_label }}">사진</label>
+                    <div class="mt-1">{{ post_form.image }}</div>
+                  </div>
+                  <button class="rounded-md bg-neutral-950 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800">게시하기</button>
+                </form>
+              {% endif %}
+            {% else %}
+              <p class="mt-4 text-sm leading-6 text-neutral-600">로그인하면 게시글을 작성할 수 있습니다.</p>
+            {% endif %}
+          </div>
+
+          <div class="divide-y divide-neutral-200">
+            {% if board_type == "verified" and not can_access_verified_board %}
+              <p class="py-8 text-sm leading-6 text-neutral-600">해당 학교 인증 후 인증 게시판 글을 볼 수 있습니다.</p>
+            {% endif %}
+            {% for post in posts %}
+              <article class="py-4">
+                <a class="block" href="{% url 'core:post_detail' school.code post.id %}">
+                  <div class="flex flex-wrap items-center gap-2">
+                    {% if post.board_type == "verified" %}
+                      <span class="rounded-md bg-teal-50 px-2 py-1 text-xs font-medium text-teal-800">인증</span>
+                    {% else %}
+                      <span class="rounded-md bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-600">일반</span>
+                    {% endif %}
+                    <h3 class="font-semibold text-neutral-950 hover:text-teal-800">{{ post.title }}</h3>
+                  </div>
+                  {% if post.image %}
+                    <div class="spoiler-thumb group mt-3 h-28 w-40 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100">
+                      <img class="h-full w-full object-cover blur-md transition duration-200 group-hover:blur-0 group-focus:blur-0" src="{{ post.image.url }}" alt="">
+                      <span class="pointer-events-none absolute inset-0 flex items-center justify-center bg-neutral-950/35 text-xs font-medium text-white transition duration-200 group-hover:opacity-0 group-focus:opacity-0">스포일러</span>
+                    </div>
+                  {% endif %}
+                  <p class="mt-2 line-clamp-2 text-sm leading-6 text-neutral-600">{{ post.body }}</p>
+                </a>
+                <div class="mt-3 flex flex-wrap gap-3 text-xs text-neutral-500">
+                  <a class="font-medium text-neutral-600 hover:text-teal-800" href="{% url 'accounts:user_profile' post.author.id %}">{{ post.author_display_name }}</a>
+                  <time>{{ post.created_at|date:"Y.m.d H:i" }}</time>
+                  <span>추천 {{ post.recommendations.count }}</span>
+                  <span>댓글 {{ post.comments.count }}</span>
+                </div>
+              </article>
+            {% empty %}
+              {% if board_type != "verified" or can_access_verified_board %}
+                <p class="py-8 text-sm text-neutral-600">아직 게시글이 없습니다.</p>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    </section>
+  {% else %}
+    <section class="mt-8">
+      <h2 class="text-xl font-semibold text-neutral-950">동문</h2>
+      <p class="mt-3 leading-7 text-neutral-700">이 학교로 인증된 사용자와 관리자 검수를 거친 출신 유명인입니다.</p>
+
+      <div class="mt-6 grid gap-8 lg:grid-cols-2">
+        <section>
+          <h3 class="font-semibold text-neutral-950">인증 유저</h3>
+          <div class="mt-3 divide-y divide-neutral-200">
+            {% for verified_profile in verified_profiles %}
+              <article class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
+                <a class="font-semibold text-neutral-950 hover:text-teal-800" href="{% url 'accounts:user_profile' verified_profile.user.id %}">
+                  {{ verified_profile.display_name }}
+                </a>
+                <div class="flex flex-wrap items-center gap-2 text-sm text-neutral-600">
+                  {% if verified_profile.school_verification_type == "graduated" %}
+                    <span class="rounded-md bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-700">졸업생</span>
+                  {% elif verified_profile.school_verification_type == "enrolled" %}
+                    <span class="rounded-md bg-teal-50 px-2 py-1 text-xs font-medium text-teal-800">재학생</span>
+                  {% else %}
+                    <span class="rounded-md bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-700">인증됨</span>
+                  {% endif %}
+                  {% if verified_profile.school_verified_at %}
+                    <span>{{ verified_profile.school_verified_at|date:"Y.m.d" }} 인증</span>
+                  {% endif %}
+                </div>
+              </article>
+            {% empty %}
+              <p class="py-8 text-sm text-neutral-600">아직 인증된 사용자가 없습니다.</p>
+            {% endfor %}
+          </div>
+        </section>
+
+        <section>
+          <h3 class="font-semibold text-neutral-950">출신 유명인</h3>
+          <div class="mt-3 divide-y divide-neutral-200">
+            {% for alumni in famous_alumni %}
+              <article class="py-4">
+                <p class="font-semibold text-neutral-950">{{ alumni.name }}</p>
+                {% if alumni.description %}
+                  <p class="mt-1 text-sm leading-6 text-neutral-700">{{ alumni.description }}</p>
+                {% endif %}
+                {% if alumni.source_url %}
+                  <a class="mt-2 inline-block text-xs font-medium text-teal-700 hover:text-teal-900" href="{{ alumni.source_url }}" target="_blank" rel="noreferrer">
+                    출처{% if alumni.source_name %}: {{ alumni.source_name }}{% endif %}
+                  </a>
+                {% endif %}
+              </article>
+            {% empty %}
+              <p class="py-8 text-sm text-neutral-600">아직 등록된 출신 유명인이 없습니다.</p>
+            {% endfor %}
+          </div>
+        </section>
+      </div>
+    </section>
+  {% endif %}
+{% endblock %}

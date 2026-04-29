@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}학교 찾기 - dongmoon{% endblock %}
+
+{% block content %}
+  <section class="max-w-3xl">
+    <p class="text-sm font-medium uppercase tracking-wide text-teal-700">Find Your High School</p>
+    <h1 class="mt-3 text-4xl font-semibold tracking-tight text-neutral-950 md:text-5xl">dongmoon</h1>
+    <p class="mt-5 text-lg leading-8 text-neutral-700">
+      출신 고등학교를 검색하고, 학교별 커뮤니티 공간으로 들어가세요.
+    </p>
+  </section>
+
+  <form class="mt-8 flex max-w-3xl gap-3" method="get" action="{% url 'core:school_search' %}">
+    <input
+      class="min-w-0 flex-1 rounded-md border border-neutral-300 bg-white px-4 py-3 text-base outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-100"
+      type="search"
+      name="q"
+      value="{{ query }}"
+      placeholder="학교명, 지역, 주소로 검색"
+      autocomplete="off"
+      autofocus
+    >
+    <button class="rounded-md bg-neutral-950 px-5 py-3 text-sm font-medium text-white hover:bg-neutral-800">
+      검색
+    </button>
+  </form>
+
+  {% if request.user.is_authenticated and verified_school or favorite_schools %}
+    <section class="mt-10 grid gap-6 md:grid-cols-2">
+      {% if verified_school %}
+        <div class="border-l-4 border-teal-700 bg-white px-5 py-4">
+          <p class="text-sm font-medium text-teal-700">내 인증 학교</p>
+          <a class="mt-2 block text-lg font-semibold text-neutral-950 hover:text-teal-800" href="{% url 'core:school_detail' verified_school.code %}">
+            {{ verified_school.name }}
+          </a>
+          <p class="mt-1 text-sm text-neutral-600">{{ verified_school.region }}</p>
+        </div>
+      {% endif %}
+
+      {% if favorite_schools %}
+        <div class="bg-white px-5 py-4">
+          <p class="text-sm font-medium text-neutral-700">즐겨찾기 학교</p>
+          <div class="mt-3 max-h-32 space-y-2 overflow-y-auto pr-2">
+            {% for favorite_school in favorite_schools %}
+              <a class="block text-sm font-medium text-neutral-950 hover:text-teal-800" href="{% url 'core:school_detail' favorite_school.code %}">
+                {{ favorite_school.name }}
+              </a>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    </section>
+  {% endif %}
+
+  <section class="mt-10">
+    <div class="flex items-end justify-between gap-4 border-b border-neutral-200 pb-3">
+      <div>
+        <h2 class="text-lg font-semibold text-neutral-950">학교 목록</h2>
+        <p class="mt-1 text-sm text-neutral-600">
+          {% if query %}
+            "{{ query }}" 검색 결과 {{ total_count }}개
+          {% else %}
+            등록된 고등학교 {{ total_count }}개
+          {% endif %}
+        </p>
+      </div>
+    </div>
+
+    <div class="divide-y divide-neutral-200">
+      {% for school in schools %}
+        <div class="flex flex-col gap-3 py-5 hover:bg-white md:flex-row md:items-center md:justify-between">
+          <a class="block flex-1" href="{% url 'core:school_detail' school.code %}">
+            <div>
+              <h3 class="font-semibold text-neutral-950">{{ school.name }}</h3>
+              <p class="mt-1 text-sm text-neutral-600">{{ school.region }} · {{ school.establishment }} · {{ school.school_type }}</p>
+              <p class="mt-1 text-sm text-neutral-500">{{ school.road_address }}</p>
+            </div>
+          </a>
+          <div class="flex items-center gap-3">
+            {% if request.user.is_authenticated %}
+              <form method="post" action="{% url 'core:toggle_school_favorite' school.code %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button class="rounded-md border border-neutral-300 bg-white px-3 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-100">
+                  {% if school.id in favorite_school_ids %}즐겨찾기 해제{% else %}즐겨찾기{% endif %}
+                </button>
+              </form>
+            {% endif %}
+            <span class="text-sm font-medium text-teal-700">학교 커뮤니티 열기</span>
+          </div>
+        </div>
+      {% empty %}
+        <div class="py-12 text-sm text-neutral-600">검색 결과가 없습니다.</div>
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}
